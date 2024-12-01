@@ -1,3 +1,2 @@
-streamlit_webrtc
 speechrecognition
-pyttsx3
+gTTS
