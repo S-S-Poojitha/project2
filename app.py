@@ -1,28 +1,41 @@
-from gtts import gTTS
-import speech_recognition as sr
 import streamlit as st
+from google.cloud import speech
+from google.cloud.speech import enums
+from google.cloud.speech import types
+import io
+import wave
+import pyaudio
+from gtts import gTTS
 
 # Function to convert text to speech
-def SpeakText(command):
+def speak_text(command):
     tts = gTTS(text=command, lang='en')
     tts.save("output.mp3")
     st.audio("output.mp3", format="audio/mp3")
 
-r = sr.Recognizer()
+# Function for speech recognition with Google Cloud Speech-to-Text
+def recognize_speech():
+    client = speech.SpeechClient()
 
-while True:
-    try:
-        with sr.Microphone() as source:
-            r.adjust_for_ambient_noise(source)
-            audio = r.listen(source)
+    # Read the audio file
+    audio_file = "path_to_your_audio_file.wav"  # Add path to your audio file
+    with io.open(audio_file, "rb") as audio:
+        content = audio.read()
 
-            MyText = r.recognize_google(audio)
-            MyText = MyText.lower()
+    audio = types.RecognitionAudio(content=content)
+    config = types.RecognitionConfig(
+        encoding=enums.RecognitionConfig.AudioEncoding.LINEAR16,
+        sample_rate_hertz=16000,
+        language_code="en-US",
+    )
 
-            st.write(f"Did you say: {MyText}")
-            SpeakText(MyText)
+    response = client.recognize(config=config, audio=audio)
+    for result in response.results:
+        return result.alternatives[0].transcript
 
-    except sr.UnknownValueError:
-        st.write("Sorry, I did not catch that.")
-    except sr.RequestError as e:
-        st.write(f"Could not request results; {e}")
+# Streamlit UI
+st.title("Speech Recognition with Google Cloud API")
+if st.button("Start Listening"):
+    speech = recognize_speech()
+    st.write(f"Recognized Speech: {speech}")
+    speak_text(speech)
