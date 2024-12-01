@@ -1,37 +1,28 @@
-import streamlit as st
+from gtts import gTTS
 import speech_recognition as sr
-import pyttsx3
-from streamlit_webrtc import webrtc_streamer
+import streamlit as st
 
-# Initialize the recognizer and TTS engine
-r = sr.Recognizer()
-engine = pyttsx3.init()
-
+# Function to convert text to speech
 def SpeakText(command):
-    engine.say(command)
-    engine.runAndWait()
+    tts = gTTS(text=command, lang='en')
+    tts.save("output.mp3")
+    st.audio("output.mp3", format="audio/mp3")
 
-def recognize_audio(audio_data):
+r = sr.Recognizer()
+
+while True:
     try:
-        MyText = r.recognize_google(audio_data)
-        MyText = MyText.lower()
-        return MyText
+        with sr.Microphone() as source:
+            r.adjust_for_ambient_noise(source)
+            audio = r.listen(source)
+
+            MyText = r.recognize_google(audio)
+            MyText = MyText.lower()
+
+            st.write(f"Did you say: {MyText}")
+            SpeakText(MyText)
+
     except sr.UnknownValueError:
-        return "Could not understand audio"
+        st.write("Sorry, I did not catch that.")
     except sr.RequestError as e:
-        return f"Error: {e}"
-
-# WebRTC stream for live audio input
-def audio_callback(frame):
-    audio_data = frame.to_audio()
-    if audio_data:
-        text = recognize_audio(audio_data)
-        SpeakText(text)
-        return text
-    return ""
-
-# Streamlit layout
-st.title("Speech Recognition and TTS")
-st.write("Please speak into the microphone.")
-
-webrtc_streamer(key="example", audio_receiver_size=1024, audio_callback=audio_callback)
+        st.write(f"Could not request results; {e}")
